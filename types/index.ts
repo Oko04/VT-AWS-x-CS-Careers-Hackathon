@@ -28,6 +28,7 @@ export interface RawAnalysis {
   keyObligations: string[];
   risks: RiskItem[];
   whatYouAreAgreeingTo: string[];
+  personalDataCollected: string[];
   claims: Claim[];
   isLegalDocument: boolean;
 }
@@ -37,6 +38,7 @@ export interface AnalysisResponse {
   keyObligations: string[];
   risks: RiskItem[];
   whatYouAreAgreeingTo: string[];
+  personalDataCollected: string[];
   backedByLaw: Source[];
   isLegalDocument: boolean;
   sourcesUnavailable?: boolean;

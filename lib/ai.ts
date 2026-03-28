@@ -4,17 +4,21 @@ import type { RawAnalysis } from "../types";
 const PROMPT = `You are a legal document analyzer. Analyze the provided legal document and respond ONLY with valid JSON matching this exact structure:
 
 {
-  "whatThisMeansForYou": "string summary in plain English",
-  "keyObligations": ["bullet 1", "bullet 2"],
-  "risks": [{ "clause": "original clause text", "explanation": "why it is a risk in plain English" }],
-  "whatYouAreAgreeingTo": ["bullet 1", "bullet 2"],
+  "whatThisMeansForYou": "2-3 sentence plain English summary of the whole document",
+  "keyObligations": ["short bullet describing what the user must do", "..."],
+  "risks": [{ "clause": "brief 10-15 word quote or label identifying the risky clause", "explanation": "1-2 sentences explaining why this is a risk in plain English" }],
+  "whatYouAreAgreeingTo": ["short plain English bullet of each commitment", "..."],
+  "personalDataCollected": ["e.g. Email address", "Location data", "Browsing history", "..."],
   "claims": [{ "id": "uuid-v4", "text": "plain English claim", "searchQuery": "legal search terms" }],
   "isLegalDocument": true
 }
 
 Rules:
 - Use plain English throughout; avoid legal jargon.
-- If the text is NOT a legal document, return: { "whatThisMeansForYou": "", "keyObligations": [], "risks": [], "whatYouAreAgreeingTo": [], "claims": [], "isLegalDocument": false }
+- Keep every bullet point and explanation concise — one sentence max.
+- For "clause" in risks: use a SHORT label or brief quote (max 15 words), NOT the full clause text.
+- For "personalDataCollected": list each specific type of personal data the document says is collected or required. If the document does not mention personal data collection, return an empty array [].
+- If the text is NOT a legal document, return: { "whatThisMeansForYou": "", "keyObligations": [], "risks": [], "whatYouAreAgreeingTo": [], "personalDataCollected": [], "claims": [], "isLegalDocument": false }
 - For each claim in the "claims" array, generate a unique UUID v4 for the "id" field.
 - Respond ONLY with the JSON object — no markdown, no explanation, no code fences.`;
 
@@ -44,7 +48,7 @@ export async function analyzeDocument(
 
   const message = await client.messages.create({
     model: "claude-sonnet-4-5-20250929",
-    max_tokens: 4096,
+    max_tokens: 16000,
     messages: [{ role: "user", content: userContent }],
   });
 
@@ -55,10 +59,13 @@ export async function analyzeDocument(
 
   let parsed: RawAnalysis;
   try {
-    const raw = content.text
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
+    // Extract JSON object regardless of markdown wrapping or extra text
+    const firstBrace = content.text.indexOf("{");
+    const lastBrace = content.text.lastIndexOf("}");
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error("No JSON object found in response");
+    }
+    const raw = content.text.slice(firstBrace, lastBrace + 1);
     parsed = JSON.parse(raw) as RawAnalysis;
   } catch {
     throw new Error(

@@ -89,6 +89,27 @@ export default function AnalysisOutput({
         </ul>
       </section>
 
+      {/* Personal Data Collected */}
+      {analysis.personalDataCollected && analysis.personalDataCollected.length > 0 && (
+        <section
+          aria-labelledby="heading-personal-data"
+          data-section="personal-data"
+          className="bg-purple-50 border border-purple-300 rounded-lg p-6"
+        >
+          <h2
+            id="heading-personal-data"
+            className="mb-3 text-lg font-semibold text-purple-900"
+          >
+            Personal Data Collected
+          </h2>
+          <ul className="list-disc space-y-1 pl-5 text-purple-800">
+            {analysis.personalDataCollected.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* What You Are Agreeing To */}
       <section
         aria-labelledby="heading-agreeing"

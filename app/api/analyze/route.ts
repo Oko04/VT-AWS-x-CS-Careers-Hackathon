@@ -47,6 +47,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         keyObligations: rawAnalysis.keyObligations,
         risks: rawAnalysis.risks,
         whatYouAreAgreeingTo: rawAnalysis.whatYouAreAgreeingTo,
+        personalDataCollected: [],
         backedByLaw: [],
         isLegalDocument: false,
       };
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       keyObligations: rawAnalysis.keyObligations,
       risks: rawAnalysis.risks,
       whatYouAreAgreeingTo: rawAnalysis.whatYouAreAgreeingTo,
+      personalDataCollected: rawAnalysis.personalDataCollected ?? [],
       backedByLaw: sources,
       isLegalDocument: true,
       ...(sourcesUnavailable && { sourcesUnavailable: true }),
@@ -102,5 +104,5 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-// Allow up to 60 seconds for Claude to respond
-export const maxDuration = 60;
+// Allow up to 120 seconds for Claude to respond
+export const maxDuration = 120;

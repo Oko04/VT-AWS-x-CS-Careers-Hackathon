@@ -19,6 +19,7 @@ export default function DocumentInput({
   const [textValue, setTextValue] = useState("");
   const [textError, setTextError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -61,9 +62,19 @@ export default function DocumentInput({
     const file = e.target.files?.[0];
     if (file && file.size > MAX_FILE_SIZE) {
       setFileError("File exceeds the 10 MB limit.");
+      setSelectedFileName(null);
     } else {
       setFileError(null);
+      setSelectedFileName(file?.name ?? null);
     }
+  }
+
+  function handleRemoveFile() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setSelectedFileName(null);
+    setFileError(null);
   }
 
   return (
@@ -113,17 +124,29 @@ export default function DocumentInput({
         >
           Or upload a PDF file
         </label>
-        <input
-          id="legal-file"
-          name="file"
-          type="file"
-          accept="application/pdf"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          aria-describedby={fileError ? "file-error" : undefined}
-          aria-invalid={fileError ? "true" : "false"}
-          className="block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            id="legal-file"
+            name="file"
+            type="file"
+            accept="application/pdf"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            aria-describedby={fileError ? "file-error" : undefined}
+            aria-invalid={fileError ? "true" : "false"}
+            className="block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
+          />
+          {selectedFileName && (
+            <button
+              type="button"
+              onClick={handleRemoveFile}
+              aria-label="Remove selected file"
+              className="shrink-0 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400"
+            >
+              Remove
+            </button>
+          )}
+        </div>
         {fileError && (
           <p id="file-error" role="alert" className="mt-1 text-sm text-red-600">
             {fileError}

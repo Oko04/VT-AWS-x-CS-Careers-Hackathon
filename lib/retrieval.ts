@@ -1,30 +1,30 @@
 import type { Claim, Source } from "../types";
 
-const CAP_BASE = "https://api.case.law/v1/cases/";
-const GOVINFO_BASE = "https://api.govinfo.gov/search";
+const COURTLISTENER_BASE = "https://www.courtlistener.com/api/rest/v4/search/";
 
-async function fetchCAP(claim: Claim, signal: AbortSignal): Promise<Source | null> {
-  const url = `${CAP_BASE}?search=${encodeURIComponent(claim.searchQuery)}&page_size=1`;
-  const headers: Record<string, string> = {};
-  const apiKey = process.env.CAP_API_KEY;
-  if (apiKey) {
-    headers["Authorization"] = `Token ${apiKey}`;
-  }
+async function fetchCourtListener(claim: Claim, signal: AbortSignal): Promise<Source | null> {
+  const url = `${COURTLISTENER_BASE}?q=${encodeURIComponent(claim.searchQuery)}&type=o&page_size=1&format=json`;
+  const token = process.env.COURTLISTENER_API_KEY;
+  const headers: Record<string, string> = { "Accept": "application/json" };
+  if (token) headers["Authorization"] = `Token ${token}`;
 
   const res = await fetch(url, { headers, signal });
   if (!res.ok) return null;
 
   const data = await res.json();
-  const results: Array<{ id: string; name_abbreviation: string; frontend_url: string }> =
+  const results: Array<{ absolute_url: string; caseName?: string; case_name?: string }> =
     data?.results ?? [];
 
   if (results.length === 0) return null;
 
   const first = results[0];
+  const caseName = first.caseName ?? first.case_name ?? "Court Opinion";
+  const caseUrl = `https://www.courtlistener.com${first.absolute_url}`;
+
   return {
     claimId: claim.id,
-    title: first.name_abbreviation,
-    url: first.frontend_url,
+    title: caseName,
+    url: caseUrl,
     type: "caselaw",
   };
 }
@@ -32,7 +32,7 @@ async function fetchCAP(claim: Claim, signal: AbortSignal): Promise<Source | nul
 async function fetchGovInfo(claim: Claim, signal: AbortSignal): Promise<Source | null> {
   const apiKey = process.env.GOVINFO_API_KEY ?? "";
   const url =
-    `${GOVINFO_BASE}?query=${encodeURIComponent(claim.searchQuery)}` +
+    `https://api.govinfo.gov/search?query=${encodeURIComponent(claim.searchQuery)}` +
     `&pageSize=1&offset=0&collection=USCODE&api_key=${encodeURIComponent(apiKey)}`;
 
   const res = await fetch(url, { signal });
@@ -57,8 +57,8 @@ async function lookupClaim(claim: Claim): Promise<Source | null> {
   const signal = AbortSignal.timeout(10000);
 
   try {
-    const capSource = await fetchCAP(claim, signal);
-    if (capSource) return capSource;
+    const courtSource = await fetchCourtListener(claim, signal);
+    if (courtSource) return courtSource;
 
     const govSource = await fetchGovInfo(claim, signal);
     return govSource;
