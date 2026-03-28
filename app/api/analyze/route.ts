@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseDocument, ParseError } from "../../../lib/parser";
 import { analyzeDocument } from "../../../lib/ai";
 import { fetchSources } from "../../../lib/retrieval";
 import type { AnalysisResponse, ErrorResponse } from "../../../types";
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10 MB
-const ANTHROPIC_TIMEOUT_MS = 30_000;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const correlationId = crypto.randomUUID();
@@ -15,7 +13,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const textField = formData.get("text");
     const fileField = formData.get("file");
 
-    // Determine input: file takes precedence over text
+    // Determine input: pass Buffer directly for PDFs, string for text
     let input: string | Buffer;
 
     if (fileField instanceof File) {
@@ -28,7 +26,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const arrayBuffer = await fileField.arrayBuffer();
       input = Buffer.from(arrayBuffer);
     } else if (typeof textField === "string") {
-      input = textField;
+      // Normalize pasted text
+      const { parseDocument } = await import("../../../lib/parser");
+      input = await parseDocument(textField);
     } else {
       return NextResponse.json<ErrorResponse>(
         { error: "No document provided. Please paste text or upload a PDF.", retryable: false },
@@ -36,19 +36,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Parse document
-    const text = await parseDocument(input);
-
-    // Analyze with Anthropic (30-second timeout)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
-
+    // Analyze with Anthropic — passes text or PDF Buffer directly
     let rawAnalysis;
-    try {
-      rawAnalysis = await analyzeDocument(text, controller.signal);
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    rawAnalysis = await analyzeDocument(input, new AbortController().signal);
 
     // If not a legal document, skip retrieval
     if (!rawAnalysis.isLegalDocument) {
@@ -87,14 +77,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json<AnalysisResponse>(response, { status: 200 });
   } catch (err) {
-    // ParseError — corrupt/unreadable PDF
-    if (err instanceof ParseError) {
-      return NextResponse.json<ErrorResponse>(
-        { error: "Could not read the PDF. Please paste the text manually.", retryable: false },
-        { status: 400 }
-      );
-    }
-
     // AbortError — Anthropic timeout
     if (err instanceof Error && err.name === "AbortError") {
       return NextResponse.json<ErrorResponse>(
@@ -119,3 +101,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 }
+
+// Allow up to 60 seconds for Claude to respond
+export const maxDuration = 60;

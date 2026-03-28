@@ -8,7 +8,7 @@ const PROMPT = `You are a legal document analyzer. Analyze the provided legal do
   "keyObligations": ["bullet 1", "bullet 2"],
   "risks": [{ "clause": "original clause text", "explanation": "why it is a risk in plain English" }],
   "whatYouAreAgreeingTo": ["bullet 1", "bullet 2"],
-  "claims": [{ "id": "uuid-v4", "text": "plain English claim", "searchQuery": "legal search terms for CAP/GovInfo" }],
+  "claims": [{ "id": "uuid-v4", "text": "plain English claim", "searchQuery": "legal search terms" }],
   "isLegalDocument": true
 }
 
@@ -19,26 +19,34 @@ Rules:
 - Respond ONLY with the JSON object — no markdown, no explanation, no code fences.`;
 
 export async function analyzeDocument(
-  text: string,
-  signal: AbortSignal
+  input: string | Buffer,
+  _signal: AbortSignal
 ): Promise<RawAnalysis> {
-  const client = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  });
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const message = await client.messages.create(
-    {
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 4096,
-      messages: [
+  // Build the message content — text or native PDF
+  const userContent: Anthropic.MessageParam["content"] = typeof input === "string"
+    ? `${PROMPT}\n\nDocument:\n${input}`
+    : [
         {
-          role: "user",
-          content: `${PROMPT}\n\nDocument:\n${text}`,
+          type: "document",
+          source: {
+            type: "base64",
+            media_type: "application/pdf",
+            data: input.toString("base64"),
+          },
+        } as Anthropic.DocumentBlockParam,
+        {
+          type: "text",
+          text: PROMPT,
         },
-      ],
-    },
-    { signal }
-  );
+      ];
+
+  const message = await client.messages.create({
+    model: "claude-sonnet-4-5-20250929",
+    max_tokens: 4096,
+    messages: [{ role: "user", content: userContent }],
+  });
 
   const content = message.content[0];
   if (content.type !== "text") {
@@ -47,7 +55,11 @@ export async function analyzeDocument(
 
   let parsed: RawAnalysis;
   try {
-    parsed = JSON.parse(content.text) as RawAnalysis;
+    const raw = content.text
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+    parsed = JSON.parse(raw) as RawAnalysis;
   } catch {
     throw new Error(
       `Failed to parse JSON response from Claude: ${content.text.slice(0, 200)}`
