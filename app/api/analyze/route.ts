@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeDocument } from "../../../lib/ai";
 import { fetchSources } from "../../../lib/retrieval";
-import type { AnalysisResponse, ErrorResponse } from "../../../types";
+import type { AnalysisResponse, ErrorResponse, Source } from "../../../types";
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Fetch sources (catch separately for graceful degradation)
-    let sources = [];
+    let sources: Source[] = [];
     let sourcesUnavailable = false;
     try {
       sources = await fetchSources(rawAnalysis.claims);
