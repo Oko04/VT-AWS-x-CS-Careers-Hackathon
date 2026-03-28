@@ -61,4 +61,3 @@ Open [http://localhost:3000](http://localhost:3000).
 - [Tailwind CSS](https://tailwindcss.com)
 - [Anthropic Claude](https://anthropic.com) — AI analysis
 - [CourtListener](https://courtlistener.com) — legal citations
-- [GovInfo](https://api.govinfo.gov) — U.S. Code fallback
