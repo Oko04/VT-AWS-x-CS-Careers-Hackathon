@@ -6,7 +6,7 @@ Paste or upload a legal document — contract, privacy policy, terms of service,
 
 ## Live Demo
 
-> Add your Vercel URL here once deployed.
+> [Add your Vercel URL here once deployed.](https://vt-aws-x-cs-careers-hackathon-eu6c.vercel.app/)
 
 ## Features
 
