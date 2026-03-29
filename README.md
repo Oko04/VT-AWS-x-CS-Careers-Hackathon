@@ -44,17 +44,6 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Deploying to Vercel
-
-1. Push your repo to GitHub
-2. Go to [vercel.com](https://vercel.com) and sign in with GitHub
-3. Import your repository
-4. Leave Root Directory and Build Settings as default
-5. Add environment variables:
-   - `ANTHROPIC_API_KEY`
-   - `COURTLISTENER_API_KEY`
-6. Deploy
-
 ## Tech Stack
 
 - [Next.js](https://nextjs.org) (App Router)
